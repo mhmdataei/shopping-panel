@@ -1,0 +1,444 @@
+import time
+import sqlite3
+import tkinter
+
+
+try:
+    cnt=sqlite3.connect('shopT.db')
+except:
+    print("an error occurred in db connection")
+
+
+#----create users table
+    
+# query='''create table users
+#     (ID integer primary key,
+#     user char(25) not null,
+#     pass char(25) not null,
+#     addr char(50) not null,
+#     comment CHAR(50)
+#     )'''
+# cnt.execute(query)
+# print("Table created successfully")
+# cnt.close()
+
+#----insert initial record in users table
+
+# query='''INSERT INTO users (user,pass,addr)
+# VALUES("admin","amin9918","rasht")'''
+# print("data inserted successfully")
+# cnt.execute(query)
+# cnt.commit()
+# cnt.close()
+
+#----create products table
+
+# query='''CREATE TABLE products
+#      (ID INTEGER PRIMARY KEY,
+#      pname CHAR(25) NOT NULL,
+#      price int NOT NULL,
+#      qnt int NOT NULL
+#      )'''
+# cnt.execute(query)
+# print("Table created successfully")
+# cnt.close()
+
+
+#----create finalShop table
+
+# query='''CREATE TABLE finalshop
+#     (ID INTEGER PRIMARY KEY,
+#     uid int NOT NULL,
+#     pid int NOT NULL,
+#     qnt int NOT NULL,
+#     time char(20) not null
+#     )'''
+# cnt.execute(query)
+# print("Table created successfully")
+# cnt.close()
+
+
+#----functions
+
+def infoget():
+    user=txt_user2.get()
+    passw=txt_pass2.get()
+    cpassw=txt_cpass.get()
+    addr=txt_addr.get()
+    comment=txt_comment.get()
+    return(user,passw,cpassw,addr,comment)
+
+
+def Date():
+    global Ntime
+    Time=time.localtime()
+    year=Time.tm_year
+    month=Time.tm_mon
+    day=Time.tm_mday
+    hour=Time.tm_hour
+    min=Time.tm_min
+    sec=Time.tm_sec
+    Ntime=str(year)+"/"+str(month)+"/"+str(day)+"-"+str(hour)+":"+str(min)+":"+str(sec)
+
+
+def submit_validation():
+    user,passw,cpassw,addr,comment=infoget()
+    if user=="" or passw=="" or cpassw=="" or addr=="":
+        lbl_msg2.configure(text="Fill the inputs",fg="red")
+        return(False)
+    if len(passw)<8:
+        lbl_msg2.configure(text="password min lenght is 8",fg="red")
+        return(False)
+    if passw!=cpassw:
+        lbl_msg2.configure(text="passwords are diffrent",fg="red")
+        return(False)
+    query='''select * from users where user=?'''
+    result=cnt.execute(query,(user,))
+    rows=result.fetchall()
+    if len(rows)>0:
+        lbl_msg2.configure(text="username exist",fg="red")
+        return(False)
+    return True
+
+
+def finalsubmit():
+    user,passw,cpassw,addr,comment=infoget()
+    result=submit_validation()
+    if not (result):
+        return
+    query='''insert into users (user,pass,addr,comment)
+    values(?,?,?,?)'''
+    cnt.execute(query,(user,passw,addr,comment))
+    cnt.commit()
+    lbl_msg2.configure(text="submit done",fg="green")
+
+    txt_user2.delete(0,"end")
+    txt_pass2.delete(0,"end")
+    txt_cpass.delete(0,"end")
+    txt_addr.delete(0,"end")
+    txt_comment.delete(0,"end")
+
+
+def submit():
+    global txt_user2,txt_pass2,txt_cpass,txt_addr,txt_comment,lbl_msg2
+    win_submit=tkinter.Toplevel(win)
+    win_submit.title("submit")
+    win_submit.geometry("500x600")
+
+    lbl_user2=tkinter.Label(win_submit,text="Username")
+    lbl_user2.pack()
+
+    txt_user2=tkinter.Entry(win_submit,width="25")
+    txt_user2.pack()
+
+    lbl_pass2=tkinter.Label(win_submit,text="Password")
+    lbl_pass2.pack()
+
+    txt_pass2=tkinter.Entry(win_submit,width="25")
+    txt_pass2.pack()
+
+    lbl_cpass=tkinter.Label(win_submit,text="Confirm Password")
+    lbl_cpass.pack()
+
+    txt_cpass=tkinter.Entry(win_submit,width="25")
+    txt_cpass.pack()
+
+    lbl_addr=tkinter.Label(win_submit,text="Address")
+    lbl_addr.pack()
+
+    txt_addr=tkinter.Entry(win_submit,width="50")
+    txt_addr.pack()
+
+    lbl_comment=tkinter.Label(win_submit,text="How did you find us?\n(optional)")
+    lbl_comment.pack()
+
+    txt_comment=tkinter.Entry(win_submit,width="30")
+    txt_comment.pack()
+
+    lbl_msg2=tkinter.Label(win_submit,text="")
+    lbl_msg2.pack()
+
+    btn_submit2=tkinter.Button(win_submit,text="Submit Now",command=finalsubmit)
+    btn_submit2.pack()
+
+    win_submit.mainloop()
+
+
+def login():
+    global userID
+    user=user_txt.get()
+    pas=pass_txt.get()
+    query='''SELECT id FROM users WHERE user=? AND pass=?'''
+    result=cnt.execute(query,(user,pas))
+    rows=result.fetchall()
+    if len(rows)<1:
+        msg_lbl.configure(text="wrong username or password", fg="red")
+        return
+    
+    userID=rows[0][0]
+    
+    msg_lbl.configure(text="welcome to your account", fg="green")
+    btn_login.configure(state="disabled")
+    btn_logout.configure(state="active")
+    btn_shop.configure(state="active")
+    
+    user_txt.delete(0,"end")
+    pass_txt.delete(0,"end")
+    
+    user_txt.configure(state="disabled")
+    pass_txt.configure(state="disabled")
+
+    if user=="admin":
+        admin_btn.configure(state="active")
+    
+
+def logout():
+    msg_lbl.configure(text="you are logged out now", fg="red")
+    btn_login.configure(state="active")
+    btn_logout.configure(state="disabled")
+    btn_shop.configure(state="disabled")
+    admin_btn.configure(state="disabled")
+    user_txt.configure(state="normal")
+    pass_txt.configure(state="normal")
+
+def shop_win():
+    global txt_id, txt_qnt, lbl_msg2
+    sh_win=tkinter.Toplevel(win)
+    sh_win.geometry("500x500")
+    sh_win.title("shopping panel")
+    sh_win.resizable(False,False)
+    
+
+    query='''SELECT * FROM products'''
+    result=cnt.execute(query)
+    rows=result.fetchall()
+    
+ 
+    lstbox=tkinter.Listbox(sh_win,width=350)
+    lstbox.pack(pady=10)
+    
+ 
+    lbl_id=tkinter.Label(sh_win,text="Product ID:")
+    lbl_id.pack()
+    txt_id=tkinter.Entry(sh_win,width=20)
+    txt_id.pack()
+    
+    lbl_qnt=tkinter.Label(sh_win,text="Product QNT:")
+    lbl_qnt.pack()
+    txt_qnt=tkinter.Entry(sh_win,width=20)
+    txt_qnt.pack()
+    
+    lbl_msg2=tkinter.Label(sh_win,text="")
+    lbl_msg2.pack()
+    btn_final_shop=tkinter.Button(sh_win,text="SHOP NOW!", command=final_shop)
+    btn_final_shop.pack(pady=5)
+
+       
+
+    for item in rows:
+        msg=f"{item[0]}----{item[1]}----Price:{item[2]}----QNT:{item[3]}"
+        lstbox.insert("end",msg)
+        
+    
+    sh_win.mainloop()
+    
+def final_shop():
+    Date()
+    pid=txt_id.get()
+    pqnt=txt_qnt.get()
+    if (pid=="" or pqnt==""):
+        lbl_msg2.configure(text="Please Fill All the Blanks", fg="red")
+        return
+    query='''SELECT * FROM products WHERE id=?'''
+    result=cnt.execute(query,(pid,))
+    rows=result.fetchall()
+    if len(rows)==0:
+        lbl_msg2.configure(text="wrong product id!", fg="red")
+        return
+    
+    real_pqnt=rows[0][3]
+    if int(pqnt)>real_pqnt:
+        lbl_msg2.configure(text="Error:Not enough product quantity!", fg="red")
+        return
+   
+
+    query='''INSERT INTO finalShop (uid,pid,qnt,time)
+            VALUES(?,?,?,?)'''
+    print("data inserted successfully")
+    cnt.execute(query, (userID,pid,pqnt,Ntime))
+    cnt.commit()
+
+ 
+    new_qnt=real_pqnt-int(pqnt)
+    query='''UPDATE products SET qnt=? WHERE id=?'''
+    cnt.execute(query,(new_qnt,pid))
+    cnt.commit()
+    lbl_msg2.configure(text="Successfully added to cart", fg="green")
+    txt_id.delete(0,"end")
+    txt_qnt.delete(0,"end")
+
+
+
+def admin_panel():
+
+    def final_insert():
+        pname=txt_pname.get()
+        price=txt_price.get()
+        quantity=txt_quantity.get()
+        if pname=="" or price=="" or quantity=="":
+            lbl_msg3.configure(text="please fill all inputs",fg="red")
+            return
+
+        if int(price)<0 or int(quantity)<0:
+            lbl_msg3.configure(text="wrong number range",fg="red")
+            return
+
+        query='''select * from products where pname=?'''
+        result=cnt.execute(query,(pname,))
+        rows=result.fetchone()
+        if rows:
+            lbl_msg3.configure(text="product is exist",fg="blue")
+            return
+
+        query2='''insert into products (pname,price,qnt)
+        values(?,?,?)'''
+        cnt.execute(query2,(pname,price,quantity))
+        cnt.commit()
+        lbl_msg3.configure(text="added succesfully",fg="green")
+        txt_pname.delete(0,"end")
+        txt_price.delete(0,"end")
+        txt_quantity.delete(0,"end")
+
+
+    def insert_product():
+        global txt_pname,txt_price,txt_quantity,lbl_msg3
+        win_ip=tkinter.Toplevel(win_admin)
+        win_ip.title("insert product")
+        win_ip.geometry("350x350")
+        win_ip.resizable(False,False)
+        lbl_pname=tkinter.Label(win_ip,text="product name")
+        lbl_pname.pack()
+
+        txt_pname=tkinter.Entry(win_ip,width="15")
+        txt_pname.pack()
+    
+        lbl_price=tkinter.Label(win_ip,text="price")
+        lbl_price.pack()
+
+        txt_price=tkinter.Entry(win_ip,width="15")
+        txt_price.pack()
+
+        lbl_quantity=tkinter.Label(win_ip,text="quantity")
+        lbl_quantity.pack()
+
+        txt_quantity=tkinter.Entry(win_ip,width="15")
+        txt_quantity.pack()
+
+        lbl_msg3=tkinter.Label(win_ip,text="")
+        lbl_msg3.pack()
+
+        Finsert_btn=tkinter.Button(win_ip,text="Insert now",command=final_insert)
+        Finsert_btn.pack()
+
+
+    def buy_time():
+        BT_win=tkinter.Toplevel(win_admin)
+        BT_win.geometry("500x500")
+        BT_win.title("time panel")
+        BT_win.resizable(False,False)
+     
+    
+        query='''SELECT * FROM finalshop'''
+        result=cnt.execute(query)
+        rows=result.fetchall()
+    
+        lstbox=tkinter.Listbox(BT_win,width=350)
+        lstbox.pack(pady=10)
+    
+       
+        for item in rows:
+            msg=f"{item[0]}----UserID:{item[1]}----ProductID:{item[2]}----QNT:{item[3]}----Time:{item[4]}"
+            lstbox.insert("end",msg)
+        
+        BT_win.mainloop()
+
+
+    def Buser():
+        Buser_win=tkinter.Toplevel(win_admin)
+        Buser_win.geometry("500x500")
+        Buser_win.title("best products")
+        Buser_win.resizable(False,False)
+     
+
+        query='''SELECT * FROM finalshop
+        order by qnt DESC;'''
+        result=cnt.execute(query)
+        rows=result.fetchall()
+    
+  
+        lstbox=tkinter.Listbox(Buser_win,width=350)
+        lstbox.pack(pady=10)
+        for item in rows:
+            msg=f"UserID:{item[1]}----ProductID:{item[2]}----QNT:{item[3]}"
+            lstbox.insert("end",msg)
+
+        Buser_win.mainloop()
+
+
+
+    win_admin=tkinter.Toplevel(win)
+    win_admin.title("admin panel")
+    win_admin.geometry("350x350")
+    win_admin.resizable(False,False)
+
+
+
+    insert_btn=tkinter.Button(win_admin,text="Insert product",command=insert_product)
+    insert_btn.pack(pady="10")
+
+    UPT_btn=tkinter.Button(win_admin,text="Users purchase time",command=buy_time)
+    UPT_btn.pack(pady="10")
+
+    Buser_btn=tkinter.Button(win_admin,text="Most populer products",command=Buser)
+    Buser_btn.pack(pady="10")
+
+    win_admin.mainloop()
+
+    
+#----main
+
+win=tkinter.Tk()
+win.title("Shop")
+win.geometry('350x400')
+
+user_lbl=tkinter.Label(win, text="Username")
+user_lbl.pack()
+
+user_txt=tkinter.Entry(win,width=25)
+user_txt.pack()
+
+pass_lbl=tkinter.Label(win,text="Password")
+pass_lbl.pack()
+
+pass_txt=tkinter.Entry(win,width=25)
+pass_txt.pack()
+
+msg_lbl=tkinter.Label(win,text="")
+msg_lbl.pack()
+
+btn_submit=tkinter.Button(win,text="Submit",command=submit)
+btn_submit.pack(pady="5")
+
+btn_login=tkinter.Button(win,text="Login",command=login)
+btn_login.pack(pady="5")
+
+btn_logout=tkinter.Button(win,text="Logout",state="disabled",command=logout)
+btn_logout.pack(pady="5")
+
+btn_shop=tkinter.Button(win,text="Shop",state="disabled",command=shop_win)
+btn_shop.pack(pady="5")
+
+admin_btn=tkinter.Button(win,text="Admin panel",state="disabled",command=admin_panel)
+admin_btn.pack(pady="5")
+
+win.mainloop()
